@@ -1,6 +1,7 @@
 import ReleaseTransformations._
 
 val SlickVersion = "3.1.1"
+
 val AkkaVersion = "2.4.1"
 
 scalaVersion := "2.11.7"
@@ -19,20 +20,12 @@ releaseProcess := Seq[ReleaseStep](
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,
-  ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
+  ReleaseStep(action = Command.process("publishSigned", _)),
   setNextVersion,
   commitNextVersion,
   pushChanges,
-  ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true)
+  ReleaseStep(action = Command.process("sonatypeReleaseAll", _))
 )
-
-publish := {}
-
-publishLocal := {}
-
-publishArtifact := false
-
-version := "0.1"
 
 libraryDependencies ++= Seq(
     "commons-codec" % "commons-codec" % "1.8",
