@@ -11,7 +11,7 @@ import TestUtils.awaitStream
 
 
 class RepoSpec extends org.scalatest.fixture.FlatSpec with MustMatchers with OptionValues {
-  type FixtureParam = Container
+  type FixtureParam = Database
 
   // Runs each tests against JDbcDb and InMemDb
   def withFixture(test: OneArgTest) = {

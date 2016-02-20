@@ -29,7 +29,7 @@ package repos.jdbc
 import akka.actor.Actor
 import akka.event.Logging
 import akka.stream.Materializer
-import repos.{SecondaryIndex, Repo, JdbcDb, Container}
+import repos.{SecondaryIndex, Repo, JdbcDb, Database}
 import slick.driver.JdbcDriver
 import slick.lifted
 
@@ -118,11 +118,11 @@ object TableJanitor {
 
   case object Ok
 
-  private[repos] def unindexedEntries[Id, M, R](container: JdbcDb)(
+  private[repos] def unindexedEntries[Id, M, R](jdbcDb: JdbcDb)(
     repo: Repo[Id, M], startPk: Long)(indexTable: SecondaryIndex[Id, M, R]) = {
-    import container.profile.api._
-    val it: lifted.TableQuery[JdbcDb#Ix3Table[Id, R]] = container.innerIndex(indexTable).indexTable.asInstanceOf[lifted.TableQuery[JdbcDb#Ix3Table[Id, R]]]
-    container.innerRepo(repo).entryTable
+    import jdbcDb.profile.api._
+    val it: lifted.TableQuery[JdbcDb#Ix3Table[Id, R]] = jdbcDb.innerIndex(indexTable).indexTable.asInstanceOf[lifted.TableQuery[JdbcDb#Ix3Table[Id, R]]]
+    jdbcDb.innerRepo(repo).entryTable
       .filter(_.pk > startPk)
       .filterNot(_.pk in it.map(_.parentPk))
       .result
@@ -130,21 +130,21 @@ object TableJanitor {
 
   case class IndexResult(count: Long, maxPkSeen: Long)
 
-  def indexEntries[Id, M, R](container: JdbcDb)(
+  def indexEntries[Id, M, R](jdbcDb: JdbcDb)(
     repo: Repo[Id, M], startPk: Long)(indexTable: SecondaryIndex[Id, M, R])(implicit am: akka.stream.Materializer): Long = {
-    val innerIndex: JdbcDb#RepoImpl[Id, M]#IndexTableImpl[R] = container.innerIndex(indexTable).asInstanceOf[JdbcDb#RepoImpl[Id, M]#IndexTableImpl[R]]
+    val innerIndex: JdbcDb#RepoImpl[Id, M]#IndexTableImpl[R] = jdbcDb.innerIndex(indexTable).asInstanceOf[JdbcDb#RepoImpl[Id, M]#IndexTableImpl[R]]
 
     val f: Future[IndexResult] = akka.stream.scaladsl.Source.fromPublisher(
-      container.db.stream(unindexedEntries(container)(repo, startPk)(indexTable))
+      jdbcDb.db.stream(unindexedEntries(jdbcDb)(repo, startPk)(indexTable))
     ).grouped(5000).runFold(IndexResult(0, startPk)) {
       (indexResult, group) =>
         val items = group.map(p => ((p.id, p.entry), p.pk))
-        container.jc.blockingWrapper(innerIndex.buildInsertAction(items))
+        jdbcDb.jc.blockingWrapper(innerIndex.buildInsertAction(items))
         println(s"Indexed ${group.size} entries into ${innerIndex.ix3TableName}")
         val maxPkSeen = indexResult.maxPkSeen max group.map(_.pk).max
         if (maxPkSeen != indexResult.maxPkSeen) {
-          container.jc.JanitorIndexStatus.updateLastPkForIndex(
-            container.db, innerIndex.ix3TableName, maxPkSeen)
+          jdbcDb.jc.JanitorIndexStatus.updateLastPkForIndex(
+            jdbcDb.db, innerIndex.ix3TableName, maxPkSeen)
         }
         indexResult.copy(
           count = indexResult.count + group.size,

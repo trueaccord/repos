@@ -18,11 +18,11 @@ import scala.language.{existentials, higherKinds}
 import scala.reflect.ClassTag
 
 
-class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backend#Database) extends Container {
+class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backend#Database) extends Database {
 
   import profile.api._
 
-  implicit def columnMapper[Id: ClassTag](implicit idMapper: IdMapper[Id]): BaseColumnType[Id] =
+  private implicit def columnMapper[Id: ClassTag](implicit idMapper: IdMapper[Id]): BaseColumnType[Id] =
     MappedColumnType.base[Id, UUID](idMapper.toUUID, idMapper.fromUUID)
 
   private def streamOrRun[R, T, E <: slick.dbio.Effect](ctx: Context)(q: FixedSqlStreamingAction[R, T, E]) = Context.go(ctx)(db.run(q))(db.stream(q))

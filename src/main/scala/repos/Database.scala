@@ -9,7 +9,7 @@ import scala.collection.mutable
 import scala.concurrent.{Future, ExecutionContext}
 import scala.util.{Failure, Success}
 
-trait Container {
+trait Database {
   class DatabaseActionContext extends Context {
     override def isStreaming: Boolean = false
   }

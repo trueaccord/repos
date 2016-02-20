@@ -9,7 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.higherKinds
 import scala.util.{Failure, Success}
 
-class InMemDb extends Container {
+class InMemDb extends Database {
 
   private class InnerRepo[Id, M](repo: Repo[Id, M]) {
     private var pk = 1
