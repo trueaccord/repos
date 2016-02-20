@@ -7,7 +7,8 @@ import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, MustMatchers}
 import repos.Action._
 import repos.SecondaryIndexQueries._
-import repos.testutils.TestUtils.{await, awaitStream}
+import repos.inmem.InMemDb
+import repos.testutils.TestUtils.await
 import repos.testutils.{FooId, FooRepo, TestUtils}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -161,11 +162,12 @@ class EquivalenceSpec extends FlatSpec with MustMatchers with PropertyChecks {
 
   class Fixture {
     val jdb = TestUtils.makeH2DB()
-    val JdbcDb = TestUtils.makeH2JdbcDb(jdb)
+    val jdbcDb = TestUtils.makeH2JdbcDb(jdb)
 
-    object InMemDb extends InMemDb
-    await(JdbcDb.run(FooRepo.create()))
-    await(InMemDb.run(FooRepo.create()))
+    val inMemDb = new InMemDb
+
+    await(jdbcDb.run(FooRepo.create()))
+    await(inMemDb.run(FooRepo.create()))
   }
 
   "Both databases" should "return the same results" in {
@@ -176,8 +178,8 @@ class EquivalenceSpec extends FlatSpec with MustMatchers with PropertyChecks {
 
         try {
           waitAndCompare(
-            JdbcDb.run(Action.seq(actions)),
-            InMemDb.run(Action.seq(actions)))
+            jdbcDb.run(Action.seq(actions)),
+            inMemDb.run(Action.seq(actions)))
         } finally {
           jdb.shutdown
         }

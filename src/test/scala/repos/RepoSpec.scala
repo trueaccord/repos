@@ -3,6 +3,7 @@ package repos
 import java.util.UUID
 
 import org.scalatest.{MustMatchers, OptionValues}
+import repos.inmem.InMemDb
 import repos.testutils.{FooRepo, FooId, TestUtils}
 import scala.concurrent.ExecutionContext.Implicits.global
 

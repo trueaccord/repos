@@ -1,6 +1,7 @@
 package repos.testutils
 
-import repos.{RepoPublisher, JdbcDb}
+import repos.RepoPublisher
+import repos.jdbc.JdbcDb
 import slick.jdbc.JdbcBackend
 import slick.jdbc.JdbcBackend.Database
 

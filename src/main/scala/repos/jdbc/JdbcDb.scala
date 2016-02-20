@@ -1,4 +1,4 @@
-package repos
+package repos.jdbc
 
 import java.util.UUID
 
@@ -7,7 +7,7 @@ import org.xerial.snappy.Snappy
 import repos.Action._
 import repos.SecondaryIndex._
 import repos.SecondaryIndexQueries._
-import repos.jdbc.JanitorComponent
+import repos._
 import slick.dbio.Effect.Read
 import slick.driver.JdbcProfile
 import slick.lifted.CanBeQueryCondition

@@ -29,7 +29,7 @@ package repos.jdbc
 import akka.actor.Actor
 import akka.event.Logging
 import akka.stream.Materializer
-import repos.{SecondaryIndex, Repo, JdbcDb, Database}
+import repos.{SecondaryIndex, Repo, Database}
 import slick.driver.JdbcDriver
 import slick.lifted
 

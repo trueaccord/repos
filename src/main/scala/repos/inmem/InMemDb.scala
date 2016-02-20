@@ -1,8 +1,9 @@
-package repos
+package repos.inmem
 
 import org.reactivestreams.{Publisher, Subscriber, Subscription}
 import repos.Action.{AggregationFunction, _}
 import repos.SecondaryIndexQueries._
+import repos._
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}

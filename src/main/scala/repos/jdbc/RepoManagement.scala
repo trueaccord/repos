@@ -1,6 +1,6 @@
 package repos.jdbc
 
-import repos.{JdbcDb, Repo}
+import repos.Repo
 import slick.jdbc.meta.MTable
 
 import scala.collection.parallel.ForkJoinTaskSupport
