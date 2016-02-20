@@ -177,7 +177,6 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
         case Min => db.run(allIndexedValues.min.result)
       }
     }
-
   }
 
   private[repos] class EntryTable[Id: ClassTag, M](tag: Tag, tableName: String)(implicit idMapper: IdMapper[Id], dataMapper: DataMapper[M])
@@ -250,12 +249,12 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
     def * = (id, value, parentPk)
   }
 
-  private var m = Map.empty[String, RepoImpl[_, _]]
+  private val repoMap: collection.concurrent.Map[String, RepoImpl[_, _]] = collection.concurrent.TrieMap.empty
 
-  private[repos] def innerRepo[Id, M](repo: Repo[Id, M]): RepoImpl[Id, M] = m.synchronized {
-    m.getOrElse(repo.name, {
+  private[repos] def innerRepo[Id, M](repo: Repo[Id, M]): RepoImpl[Id, M] = {
+    repoMap.getOrElse(repo.name, {
       val newRepo = new RepoImpl[Id, M](repo)(repo.idClass, repo.mClass, repo.dataMapper, repo.idMapper)
-      m = m + (repo.name -> newRepo)
+      repoMap += (repo.name -> newRepo)
       newRepo
     }).asInstanceOf[RepoImpl[Id, M]]
   }
@@ -296,6 +295,7 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
   }
 
   private[repos] lazy val jc = new JanitorComponent(profile, db)
+
   /** Finds the last pk the scanner has checkpointed for (jobName, repo) */
   def scannerFindLastPk[Id, M](jobName: String, repo: Repo[Id, M]): Future[Option[Long]] =
     jc.scannerCheckpoints.findLastPk(jobName, repo)
