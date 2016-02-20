@@ -85,9 +85,11 @@ class InMemDb extends Database {
       repo =>
         repoMap(repo.name) = new InMemRepoImpl(repo)
     }
+    scannerCheckpoint.clear()
   }
 
-  private var scannerCheckpoint: Map[(String, String), Long] = Map.empty[(String, String), Long]
+  private val scannerCheckpoint: collection.concurrent.Map[(String, String), Long] =
+    collection.concurrent.TrieMap.empty
 
   /** Finds the last pk the scanner has checkpointed for (jobName, repo) */
   def scannerFindLastPk[Id, M](jobName: String, repo: Repo[Id, M]): Future[Option[Long]] =
@@ -95,7 +97,7 @@ class InMemDb extends Database {
 
   /** Update the last pk the scanner has reached. */
   def scannerUpdateCheckpoint[Id, M](jobName: String, repo: Repo[Id, M], lastPk: Long): Future[Unit] = {
-    scannerCheckpoint = scannerCheckpoint + ((jobName, repo.name) -> lastPk)
+    scannerCheckpoint += ((jobName, repo.name) -> lastPk)
     Future.successful(())
   }
 }
