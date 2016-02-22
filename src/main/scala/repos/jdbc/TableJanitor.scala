@@ -84,24 +84,23 @@ class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_
   }
 
   /** Creates Janitor's index table, missing repos and index tables if they do not exist. */
-  def setupTables(writeJc: JanitorComponent, repos: Seq[Repo[_, _]])(
-    implicit ec: scala.concurrent.ExecutionContext) = {
-    val newIndexes = RepoManagement.createMissingRepos(readJdbcDb, repos)
-    // If an index table is new we force re-indexing by setting highest pk to be -1.
-    // This ensures that if we drop an index table it will get rebuilt
-    // from scratch the next time we run, regardless of what was the original value
-    // in the index status table.
-    newIndexes.foreach {
-      index =>
-        val tableName = writeJdbcDb.innerIndex(index).ix3TableName
-        writeJc.JanitorIndexStatus.updateLastPkForIndex(tableName, -1)
+  def setupTables()(implicit ec: scala.concurrent.ExecutionContext) = {
+    RepoManagement.createMissingRepos(writeJdbcDb, allRepos)
+
+    // Ensure that all indexes not in the index status are set to zero.
+    val currentStatus = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)
+    for {
+      repo <- allRepos
+      index <- repo.allIndexes if (!currentStatus.contains(readJdbcDb.innerIndex(index).ix3TableName))
+    } {
+      updateLastPkForTable(writeJdbcDb, index, 0)
     }
   }
 
   // Boots the Janitor.
   override def preStart: Unit = {
     log.info("Booting Table Janitor.")
-    setupTables(writeJdbcDb.jc, allRepos)
+    setupTables()
     val statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)
 
     updateStatus(TableJanitorStatus(
