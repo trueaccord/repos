@@ -24,7 +24,7 @@ package repos.jdbc
   * all pks up to the first unresolved gap)
   */
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{ActorRef, Actor, ActorLogging}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import repos.{EntryTableRecord, Repo, SecondaryIndex}
@@ -36,7 +36,8 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
 import scala.language.existentials
 
-class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_, _]], materializer: akka.stream.Materializer) extends Actor with ActorLogging {
+class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_, _]],
+                   materializer: akka.stream.Materializer, monitorActor: Option[ActorRef]) extends Actor with ActorLogging {
 
   import TableJanitor._
   import context.dispatcher
@@ -44,31 +45,42 @@ class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_
   // We care only about repos that have indexes.
   val repos = allRepos.filter(_.allIndexes.nonEmpty)
 
-  val repoStates: collection.mutable.Map[String, TableJanitor.State] = collection.mutable.Map.empty
+  var janitorStatus = TableJanitorStatus()
+
+  def updateStatus(newJanitorStatus: TableJanitorStatus): Unit = {
+    janitorStatus = newJanitorStatus
+    monitorActor.foreach(_ ! janitorStatus)
+  }
 
   /** Build indexes from the last checkpoint to the present.
     *
     * @return number of index records written.
     */
-  def catchUp(indexStatus: StatusTable)(implicit ec: scala.concurrent.ExecutionContext): Long = {
+  def catchUp()(implicit ec: scala.concurrent.ExecutionContext): Long = {
     implicit def am: Materializer = materializer
 
     val currentTime = System.currentTimeMillis()
 
-    repos.map {
+    val result = repos.map {
       repo =>
-        val oldState = repoStates(repo.name)
+        updateStatus(janitorStatus.copy(current = s"Catching up on ${repo.name}"))
+        val oldState = janitorStatus.repoState(repo.name)
         val newState = catchUpForRepo(
           readJdbcDb = readJdbcDb,
           writeJdbcDb = writeJdbcDb,
           currentTime = currentTime,
-          statusTable = indexStatus,
+          statusTable = janitorStatus.statusTable,
           repo = repo,
           state = oldState,
           log = log.info)
-        repoStates(repo.name) = newState
+
+        updateStatus(
+          janitorStatus.copy(
+            repoState = janitorStatus.repoState + (repo.name -> newState)))
         newState.indexedAllUpTo - oldState.indexedAllUpTo
     }.sum
+    updateStatus(janitorStatus.copy(current = "Idle"))
+    result
   }
 
   /** Creates Janitor's index table, missing repos and index tables if they do not exist. */
@@ -90,22 +102,26 @@ class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_
   override def preStart: Unit = {
     log.info("Booting Table Janitor.")
     setupTables(writeJdbcDb.jc, allRepos)
-    val status: StatusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)
+    val statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)
 
-    repoStates ++= repos.map {
-      repo =>
-        val min = repo.allIndexes.map(lookupInStatusTable(readJdbcDb, status, _)).min
-        repo.name -> State(min, min, Vector.empty)
-    }
+    updateStatus(TableJanitorStatus(
+      repoState = repos.map {
+        repo =>
+          val min = repo.allIndexes.map(lookupInStatusTable(readJdbcDb, statusTable, _)).min
+          repo.name -> State(min, min, Vector.empty)
+      }.toMap,
+      statusTable = statusTable,
+      current = "Initialized"))
 
     log.info("Starting to catch up.")
-    val updatedRecords = catchUp(status)
+    val updatedRecords = catchUp()
     log.info(s"Done catching up. $updatedRecords records updated.")
   }
 
   def receive = {
     case Tick =>
-      catchUp(loadJanitorIndexStatus(readJdbcDb = readJdbcDb))
+      janitorStatus.copy(statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb))
+      catchUp()
       sender ! Ok
   }
 
@@ -132,6 +148,11 @@ object TableJanitor {
     * @param gaps Set of pk ranges between seenAllUp to maxSeen we have not seen.
     */
   case class State(indexedAllUpTo: Long, maxSeen: Long, gaps: Vector[Gap])
+
+  case class TableJanitorStatus(
+       repoState: Map[String, State] = Map.empty,
+       statusTable: StatusTable = Map.empty,
+       current: String = "Initializing")
 
   val FORGET_MISSING_AFTER_MS = 600 * 1000
 
@@ -251,12 +272,12 @@ object TableJanitor {
   }
 
   private[repos] def catchUpForRepo[Id, M](readJdbcDb: JdbcDb,
-                            writeJdbcDb: JdbcDb,
-                            currentTime: Long,
-                            statusTable: StatusTable,
-                            repo: Repo[Id, M],
-                            state: State,
-                            log: String => Unit = println)(implicit materializer: Materializer, ec: ExecutionContext): State = {
+                                           writeJdbcDb: JdbcDb,
+                                           currentTime: Long,
+                                           statusTable: StatusTable,
+                                           repo: Repo[Id, M],
+                                           state: State,
+                                           log: String => Unit = println)(implicit materializer: Materializer, ec: ExecutionContext): State = {
     def indexItems(items: Seq[EntryTableRecord[Id, M]]): Unit = {
       val indexableItems: Seq[IndexableRecord[Id, M]] = items.map(i => ((i.id, i.entry), i.pk))
 

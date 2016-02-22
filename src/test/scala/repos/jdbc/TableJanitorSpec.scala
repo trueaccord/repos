@@ -6,7 +6,7 @@ import org.scalacheck.Gen
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, MustMatchers}
 import repos.testutils.FooId
-import repos.{IdMapper, EntryTableRecord}
+import repos.EntryTableRecord
 import repos.jdbc.TableJanitor.{State, Gap}
 
 class TableJanitorSpec extends FlatSpec with MustMatchers with PropertyChecks {
