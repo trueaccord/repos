@@ -54,10 +54,10 @@ class InMemDb extends Database {
         Future.successful(())
       case GetLastEntry(repo) =>
         Future.successful(withRepoImpl(repo)(_.lastEntry))
-      case GetEntriesAction(repo, fromPk, idsConstraint, excludePks, afterTimeMsec) =>
+      case GetEntriesAction(repo, fromPk, idsConstraint, excludePks, afterTimeMsec, count) =>
         runOrStream(ctx, Future.successful(withRepoImpl(repo)(_.getEntries(
           fromPk = fromPk, idsConstraint = idsConstraint, excludePks = excludePks,
-          afterTimeMsec = afterTimeMsec))))
+          afterTimeMsec = afterTimeMsec, count = count))))
       case GetAllLatestEntriesAction(repo) =>
         runOrStream(ctx, Future.successful(withRepoImpl(repo)(_.allLatestEntries)))
       case IndexGetAllAction(index, criteria, offset, count) =>

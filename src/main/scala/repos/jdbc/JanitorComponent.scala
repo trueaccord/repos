@@ -32,7 +32,7 @@ class JanitorComponent(val profile: JdbcProfile, db: JdbcProfile#Backend#Databas
 
   object JanitorIndexStatus extends TableQuery[JanitorIndexStatusTable](new JanitorIndexStatusTable(_)) {
 
-    def updateLastPkForIndex(db: Database, indexTableName: String, lastPk: Long): Unit = {
+    def updateLastPkForIndex(indexTableName: String, lastPk: Long): Unit = {
 
       // Update existing row if exists
       val updateCount = blockingWrapper(JanitorIndexStatus.filter(

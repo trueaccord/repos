@@ -32,9 +32,10 @@ class Repo[Id, M](val name: String)(implicit val idMapper: IdMapper[Id], val dat
   def delete(ids: Set[Id]): DeleteAction[Id, M] = DeleteAction(this, ids)
 
   def getEntries(fromPk: Long = -1, idsConstraint: Option[Seq[Id]] = None,
-                 excludePks: Set[Long] = Set.empty, afterTimeMsec: Option[Long] = None): GetEntriesAction[Id, M] =
+                 excludePks: Set[Long] = Set.empty, afterTimeMsec: Option[Long] = None,
+                 count: Option[Int] = None): GetEntriesAction[Id, M] =
     GetEntriesAction(repo = this, fromPk = fromPk, idsConstraint = idsConstraint,
-      excludePks = excludePks, afterTimeMsec = afterTimeMsec)
+      excludePks = excludePks, afterTimeMsec = afterTimeMsec, count = count)
 
   def lastEntry() = GetLastEntry(this)
 

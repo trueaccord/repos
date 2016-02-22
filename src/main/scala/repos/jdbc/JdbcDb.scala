@@ -83,13 +83,14 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
     }
 
     def getEntries(fromPk: Long, idsConstraint: Option[Seq[Id]], excludePks: Set[Long],
-                   afterTimeMsec: Option[Long], ctx: Context): Future[Seq[EntryTableRecord[Id, M]]] = {
+                   afterTimeMsec: Option[Long], count: Option[Int] = None, ctx: Context): Future[Seq[EntryTableRecord[Id, M]]] = {
       val q0 = entryTable
         .filter(_.pk > fromPk)
         .applyIfDefined(idsConstraint)(q => idSet =>q.filter(_.uuid inSet idSet))
         .applyIfDefined(afterTimeMsec)(q => timeMsec => q.filter(_.timeMsec > afterTimeMsec))
       val q1 = if (excludePks.isEmpty) q0 else q0.filterNot(_.pk inSet excludePks)
-      streamOrRun(ctx)(q1.sortBy(_.pk).result)
+      streamOrRun(ctx)(
+        q1.sortBy(_.pk).applyIfDefined(count)(_.take).result)
     }
 
     def lastEntry()(implicit ec: ExecutionContext): Future[Option[EntryTableRecord[Id, M]]] = {
@@ -281,9 +282,9 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       innerRepo(repo).lastEntry()
     case DeleteAction(repo, ids) =>
       innerRepo(repo).delete(ids).asInstanceOf[Future[R]]
-    case GetEntriesAction(repo, fromPk, idsConstraint, excludePks, afterTimeMsec) =>
+    case GetEntriesAction(repo, fromPk, idsConstraint, excludePks, afterTimeMsec, count) =>
       innerRepo(repo).getEntries(fromPk = fromPk, idsConstraint = idsConstraint,
-        excludePks = excludePks, afterTimeMsec = afterTimeMsec, ctx = ctx)
+        excludePks = excludePks, afterTimeMsec = afterTimeMsec, count = count, ctx = ctx)
     case GetAllLatestEntriesAction(repo) =>
       innerRepo(repo).allLatestEntries(ctx)
     case IndexGetAllAction(index, criteria, offset, count) =>

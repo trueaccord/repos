@@ -1,6 +1,6 @@
 package repos.jdbc
 
-import repos.Repo
+import repos.{SecondaryIndex, Repo}
 import slick.jdbc.meta.MTable
 
 import scala.collection.parallel.ForkJoinTaskSupport
@@ -15,7 +15,7 @@ object RepoManagement {
 
   // Create all missing repos and index tables.
   def createMissingRepos(jdbcDb: JdbcDb,
-                         repos: Seq[Repo[_, _]]): Seq[String] = {
+                         repos: Seq[Repo[_, _]], log: String => Unit = println): Seq[SecondaryIndex[_, _, _]] = {
     val jc = jdbcDb.jc
     import jc.profile.api._
 
@@ -33,17 +33,17 @@ object RepoManagement {
 
     val originalTables = existingTables(jdbcDb)
 
-    def upgradeRepo(repo: Repo[_, _]): List[String] = {
+    def upgradeRepo(repo: Repo[_, _]): List[SecondaryIndex[_, _, _]] = {
       if (!originalTables.contains(repo.name)) {
-        println(s"Creating ${repo.name}.")
+        log(s"Creating ${repo.name}.")
         Await.result(jdbcDb.run(repo.create()), Duration.Inf)
       }
       val currentExistingTables = existingTables(jdbcDb)
       repo.allIndexes.collect {
         case indexTable if !currentExistingTables.contains(jdbcDb.innerIndex(indexTable).ix3TableName) =>
-          println(s"Creating missing index table ${indexTable.name}.")
+          log(s"Creating missing index table ${indexTable.name}.")
           jc.blockingWrapper(jdbcDb.innerIndex(indexTable).indexTable.schema.create)
-          jdbcDb.innerIndex(indexTable).ix3TableName
+          indexTable
       }
     }
 

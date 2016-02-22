@@ -47,7 +47,8 @@ object Action {
   case class MultiGetAction[Id, M](repo: Repo[Id, M], ids: Iterable[Id]) extends RepoAction[NoStream, Id, M, Map[Id, M]]
 
   case class GetEntriesAction[Id, M](repo: Repo[Id, M], fromPk: Long, idsConstraint: Option[Seq[Id]],
-                                     excludePks: Set[Long], afterTimeMsec: Option[Long]) extends RepoAction[Streaming[EntryTableRecord[Id, M]], Id, M, Seq[EntryTableRecord[Id, M]]]
+                                     excludePks: Set[Long], afterTimeMsec: Option[Long],
+                                     count: Option[Int] = None) extends RepoAction[Streaming[EntryTableRecord[Id, M]], Id, M, Seq[EntryTableRecord[Id, M]]]
 
   case class GetLastEntry[Id, M](repo: Repo[Id, M]) extends RepoAction[NoStream, Id, M, Option[EntryTableRecord[Id, M]]]
 

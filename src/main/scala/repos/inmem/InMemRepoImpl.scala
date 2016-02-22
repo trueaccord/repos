@@ -42,12 +42,13 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
   def lastEntry: Option[EntryTableRecord[Id, M]] = main.lastOption
 
   def getEntries(fromPk: Long, idsConstraint: Option[Seq[Id]], excludePks: Set[Long],
-                 afterTimeMsec: Option[Long]): Seq[EntryTableRecord[Id, M]] = {
+                 afterTimeMsec: Option[Long], count: Option[Int] = None): Seq[EntryTableRecord[Id, M]] = {
     main.view
       .filter(_.pk > fromPk)
       .applyIfDefined(idsConstraint)(q => idSet => q.filter(e => idSet.contains(e.id)))
       .applyIfDefined(afterTimeMsec)(q => timeMsec => q.filter(e => e.timestamp > timeMsec))
       .filterNot(e => excludePks.contains(e.pk))
+      .applyIfDefined(count)(_.take)
       .toVector
   }
 

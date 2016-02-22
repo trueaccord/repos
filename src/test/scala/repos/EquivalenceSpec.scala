@@ -100,7 +100,8 @@ object GenActions {
     minPk <- Gen.choose(-1, 200)
     idsConstaint <- Gen.option(Gen.listOf(Gen.oneOf(idSet)))
     excludedPks <- Gen.listOf(Gen.choose(-20L, 50L)).map(_.toSet)
-  } yield repo.getEntries(minPk, idsConstaint, excludedPks).map(_.map(_.copy(timestamp = 0)))
+    count <- Gen.option(Gen.choose(0, 5))
+  } yield repo.getEntries(minPk, idsConstaint, excludedPks, count = count).map(_.map(_.copy(timestamp = 0)))
 
   def genLastEntry[Id, M](repo: Repo[Id, M]): Gen[Action[NoStream, Option[EntryTableRecord[Id, M]]]] =
     Gen.const(repo.lastEntry().map(_.map(_.copy(timestamp = 0))))
