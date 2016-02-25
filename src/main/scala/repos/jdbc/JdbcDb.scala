@@ -127,7 +127,7 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       def buildInsertAction(entries: Iterable[((Id, M), Long)]) = {
         indexTable ++= (for {
           ((id, item), pk) <- entries
-          r <- index.projection(item)
+          r <- index.projection(item).distinct
         } yield (id, r, pk))
       }
 

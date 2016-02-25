@@ -17,6 +17,8 @@ object FooRepo extends Repo[FooId, String]("foo") {
   }
 
   def firstTwoIndex = indexTable("first_two_ch")(_.take(2))
+
+  def seqIndex = multiIndexTable("seq")(_.toSeq)
 }
 
 object StringDataMapper {
