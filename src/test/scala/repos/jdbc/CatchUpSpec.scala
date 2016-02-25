@@ -118,7 +118,11 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
         r must be(State(7, 7, Vector.empty))
         val newStatus = TableJanitor.loadJanitorIndexStatus(db)
         newStatus must be(Map(
-          "ix3_foo__text_text" -> 7, "ix3_foo__len_index" -> 7, "ix3_foo__first_ch" -> 7, "ix3_foo__first_two_ch" -> 7
+          "ix3_foo__text_text" -> 7,
+          "ix3_foo__len_index" -> 7,
+          "ix3_foo__first_ch" -> 7,
+          "ix3_foo__first_two_ch" -> 7,
+          "ix3_foo__seq" -> 7
         ))
     }
 
@@ -140,8 +144,11 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
           }
           val statusTable2 = TableJanitor.loadJanitorIndexStatus(db)
           statusTable2 must be(Map(
-            "ix3_foo__text_text" -> 1, "ix3_foo__len_index" -> 1, "ix3_foo__first_ch" -> 1,
-            "ix3_foo__first_two_ch" -> 1
+            "ix3_foo__text_text" -> 1,
+            "ix3_foo__len_index" -> 1,
+            "ix3_foo__first_ch" -> 1,
+            "ix3_foo__first_two_ch" -> 1,
+            "ix3_foo__seq" -> 1
           ))
 
           t.createTable(on = db2)
@@ -160,8 +167,11 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
 
           val statusTable3 = TableJanitor.loadJanitorIndexStatus(db2)
           statusTable3 must be(Map(
-            "ix3_foo__text_text" -> 2, "ix3_foo__len_index" -> 2, "ix3_foo__first_ch" -> 2,
-            "ix3_foo__first_two_ch" -> 2
+            "ix3_foo__text_text" -> 2,
+            "ix3_foo__len_index" -> 2,
+            "ix3_foo__first_ch" -> 2,
+            "ix3_foo__first_two_ch" -> 2,
+            "ix3_foo__seq" -> 2
           ))
 
           val newState3 = TableJanitor.catchUpForRepo(db2, db2,
@@ -170,20 +180,27 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
 
           val statusTable4 = TableJanitor.loadJanitorIndexStatus(db2)
           statusTable4 must be(Map(
-            "ix3_foo__text_text" -> 8, "ix3_foo__len_index" -> 8, "ix3_foo__first_ch" -> 8,
-            "ix3_foo__first_two_ch" -> 8
+            "ix3_foo__text_text" -> 8,
+            "ix3_foo__len_index" -> 8,
+            "ix3_foo__first_ch" -> 8,
+            "ix3_foo__first_two_ch" -> 8,
+            "ix3_foo__seq" -> 8
           ))
         }
     }
 
-    "can catch up a new index, not moving forward old indexes" in {
+    "be able to catch up a new index, not moving forward old indexes" in {
       t =>
         import t._
         t.createTable()
 
         val statusTable = Map(
-          "ix3_foo__text_text" -> -1L, "ix3_foo__len_index" -> -1L, "ix3_foo__first_ch" -> 1000L,
-          "ix3_foo__first_two_ch" -> 1000L)
+          "ix3_foo__text_text" -> -1L,
+          "ix3_foo__len_index" -> -1L,
+          "ix3_foo__first_ch" -> 1000L,
+          "ix3_foo__first_two_ch" -> 1000L,
+          "ix3_foo__seq" -> 1000L
+        )
         statusTable.foreach {
           t => db.jc.JanitorIndexStatus.updateLastPkForIndex(t._1, t._2)
         }
@@ -194,8 +211,11 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
 
         val statusTable2 = TableJanitor.loadJanitorIndexStatus(db)
         statusTable2 must be(Map(
-          "ix3_foo__text_text" -> 7, "ix3_foo__len_index" -> 7, "ix3_foo__first_ch" -> 1000,
-          "ix3_foo__first_two_ch" -> 1000
+          "ix3_foo__text_text" -> 7,
+          "ix3_foo__len_index" -> 7,
+          "ix3_foo__first_ch" -> 1000,
+          "ix3_foo__first_two_ch" -> 1000,
+          "ix3_foo__seq" -> 1000
         ))
         await(db.run(FooRepo.textIndex.allMatching(d5))) must contain (id5 -> d5)
     }

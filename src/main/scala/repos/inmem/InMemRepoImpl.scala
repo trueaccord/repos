@@ -59,7 +59,7 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
     def indexAction(entries: Iterable[(Id, (Long, M))]) = {
       for {
         (id, (pk, item)) <- entries
-        r <- index.projection(item)
+        r <- index.projection(item).distinct
       } {
         data.addBinding(r, (pk, id))
       }
