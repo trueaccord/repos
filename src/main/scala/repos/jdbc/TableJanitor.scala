@@ -97,8 +97,7 @@ class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_
     }
   }
 
-  // Boots the Janitor.
-  override def preStart: Unit = {
+  def initJanitor(): Unit = {
     log.info("Booting Table Janitor.")
     setupTables()
     val statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)
@@ -112,16 +111,23 @@ class TableJanitor(readJdbcDb: JdbcDb, writeJdbcDb: JdbcDb, allRepos: Seq[Repo[_
       statusTable = statusTable,
       current = "Initialized"))
 
+
     log.info("Starting to catch up.")
     val updatedRecords = catchUp()
     log.info(s"Done catching up. $updatedRecords records updated.")
   }
 
+  // Boots the Janitor.
+  override def preStart: Unit = {
+    self ! Init
+  }
+
   def receive = {
+    case Init =>
+      initJanitor()
     case Tick =>
-      janitorStatus.copy(statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb))
+      updateStatus(janitorStatus.copy(statusTable = loadJanitorIndexStatus(readJdbcDb = readJdbcDb)))
       catchUp()
-      sender ! Ok
   }
 
   override def postStop: Unit = {
@@ -134,7 +140,7 @@ object TableJanitor {
 
   case object Tick
 
-  case object Ok
+  case object Init
 
   case class Gap(start: Long, end: Long, observed: Long) {
     override def toString: String = s"[$start, $end] at $observed"

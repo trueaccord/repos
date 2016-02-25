@@ -31,6 +31,7 @@ libraryDependencies ++= Seq(
     "commons-codec" % "commons-codec" % "1.8",
     "com.typesafe.akka" %% "akka-actor" % AkkaVersion,
     "com.typesafe.akka" %% "akka-stream-experimental" % "2.0.3",
+    "com.typesafe.akka" %% "akka-http-experimental" % "2.0.3",
     "com.typesafe.slick" %% "slick" % SlickVersion,
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "org.scala-lang.modules" %% "scala-async" % "0.9.5",
@@ -41,3 +42,6 @@ libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "2.2.6" % "test",
     "org.scalacheck" %% "scalacheck" % "1.12.5" % "test"
 )
+
+lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
+
