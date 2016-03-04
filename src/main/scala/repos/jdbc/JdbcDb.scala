@@ -41,21 +41,27 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       val effectiveIndexMap =
         if (skipIndexesForTesting) Map.empty[String, IndexTableImpl[_]] else
         indexMap
-      // Build the insert as a single DBAction.
+      // Build the insert as a single DBAction, but not a transaction.
+      // Transactions in Slick 3 make it more challenging to tune the maximum number of connections:
+      // Since between the steps there are computations (flatMaps) that require computations
+      // between the actions, the Slick thread get released and uses a new connection. The connect
+      // that is allocated to the transaction is not owned by any Slick thread until the transaction
+      // completes. This makes it possible for numConnections > numSlickThreads which may sometimes
+      // exceed the number of connections in the pool.
       val r = for {
+        // log table
         pkList <- entryTable.returning(entryTable.map(_.pk)) ++= newEntries
-        _ <- DBIO.sequence(effectiveIndexMap.values.map(
-          _.buildInsertAction(elements zip pkList)))
-        // As we are making all the inserts in one big transaction which locks the rows being updated
-        // We must make sure that we make the inserts in the same order. Otherwise, a parallel insertion
-        // that tries to insert the same ids but in a different order will cause a deadlock.
-        // To avoid this situation, we insert the new elements into the latest table ordered by
-        // their ids.
+
+        // latest table
         _ <- DBIO.sequence((newEntries zip pkList).toSeq.sortBy(t => idMapper.toUUID(t._1.id)).map {
           e => latestEntryTable.insertOrUpdate((e._1.id, e._1.entry, e._2))
         })
+
+        // indexes
+        _ <- DBIO.sequence(effectiveIndexMap.values.map(
+          _.buildInsertAction(elements zip pkList)))
       } yield pkList
-      db.run(r.transactionally)
+      db.run(r)
     }
 
     private val getLatestByIdQuery = latestEntryTable.findBy(_.id)
