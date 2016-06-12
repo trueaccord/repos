@@ -235,10 +235,11 @@ object TableJanitor {
                                              log: String => Unit = _ => ()) = {
     import jdbcDb.profile.api._
     val inner = jdbcDb.innerIndex(indexTable)
+    val pksToIndex: Seq[Long] = entries.map(_._2)
     val alreadyIndexedPk: Set[Long] =
       jdbcDb.jc.blockingWrapper(
         inner.indexTable.asInstanceOf[lifted.TableQuery[JdbcDb#Ix3Table[Id, R]]]
-          .filter(_.parentPk inSet (entries.map(_._2))).map(_.parentPk).result).toSet
+          .filter(_.parentPk inSet pksToIndex).map(_.parentPk).result).toSet
     val unindexedEntries = entries.filterNot(e => alreadyIndexedPk.contains(e._2))
     if (unindexedEntries.nonEmpty) {
       jdbcDb.jc.blockingWrapper(inner.buildInsertAction(unindexedEntries))

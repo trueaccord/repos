@@ -2,9 +2,9 @@ import ReleaseTransformations._
 
 val SlickVersion = "3.1.1"
 
-val AkkaVersion = "2.4.1"
+val AkkaVersion = "2.4.7"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 organization := "com.trueaccord.repos"
 
@@ -30,8 +30,8 @@ releaseProcess := Seq[ReleaseStep](
 libraryDependencies ++= Seq(
     "commons-codec" % "commons-codec" % "1.8",
     "com.typesafe.akka" %% "akka-actor" % AkkaVersion,
-    "com.typesafe.akka" %% "akka-stream-experimental" % "2.0.3",
-    "com.typesafe.akka" %% "akka-http-experimental" % "2.0.3",
+    "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
+    "com.typesafe.akka" %% "akka-http-experimental" % AkkaVersion,
     "com.typesafe.slick" %% "slick" % SlickVersion,
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "org.scala-lang.modules" %% "scala-async" % "0.9.5",
