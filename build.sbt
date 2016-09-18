@@ -2,7 +2,7 @@ import ReleaseTransformations._
 
 val SlickVersion = "3.1.1"
 
-val AkkaVersion = "2.4.7"
+val AkkaVersion = "2.4.10"
 
 scalaVersion := "2.11.8"
 
@@ -36,6 +36,8 @@ libraryDependencies ++= Seq(
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     "org.scala-lang.modules" %% "scala-async" % "0.9.5",
     "org.xerial.snappy" % "snappy-java" % "1.1.1.6",
+    "com.github.shyiko" % "mysql-binlog-connector-java" % "0.4.1",
+    "org.slf4j" % "slf4j-api" % "1.7.5",
 
     "com.typesafe.akka" %% "akka-testkit" % AkkaVersion % "test",
     "com.h2database" % "h2" % "1.4.189" % "test",
