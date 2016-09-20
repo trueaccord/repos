@@ -79,9 +79,9 @@ object RepoManagement {
     }
   }
 
-  def cleanStaleIndex[Id, M, R](jdbcDb: JdbcDb, repo: Repo[Id, M], index: SecondaryIndex[Id, M, R]) = {
+  def cleanStaleIndex[Id, M, R](jdbcDb: JdbcDb, index: SecondaryIndex[Id, M, R]) = {
     import jdbcDb.profile.api._
-    val latestTableName = jdbcDb.innerRepo(repo).latestTableName
+    val latestTableName = jdbcDb.innerRepo(index.repo).latestTableName
     val ix3TableName = jdbcDb.innerIndex(index).ix3TableName
 
     val queryString: DBIO[Int] =
