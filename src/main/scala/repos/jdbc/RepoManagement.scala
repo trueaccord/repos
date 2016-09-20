@@ -79,6 +79,19 @@ object RepoManagement {
     }
   }
 
+  def cleanStaleIndex[Id, M, R](jdbcDb: JdbcDb, repo: Repo[Id, M], index: SecondaryIndex[Id, M, R]) = {
+    import jdbcDb.profile.api._
+    val latestTableName = jdbcDb.innerRepo(repo).latestTableName
+    val ix3TableName = jdbcDb.innerIndex(index).ix3TableName
+
+    val queryString: DBIO[Int] =
+      sqlu"""DELETE i FROM #$ix3TableName AS i LEFT JOIN
+            #$latestTableName AS l ON i.id=l.id AND i.parent_pk=l.parent_pk
+            WHERE l.parent_pk IS NULL;"""
+    val count = jdbcDb.jc.blockingWrapper(queryString)
+    count
+  }
+
   // added by fabian@trueaccord.com 2014-09-05 as this is a heavy
   // query that we only need for maintainance i implemented it in
   // sql straight away
