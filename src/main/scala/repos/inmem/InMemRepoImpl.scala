@@ -19,15 +19,20 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
     i.name -> new InnerIndex(i)
   }.toMap
 
-  def insert(pairs: (Id, M)*) = {
+  def insert(pairs: (Id, M)*): Unit = {
+    val prepared = insertWithoutLatest(pairs: _*)
+    latest ++= prepared
+  }
+
+  def insertWithoutLatest(pairs: (Id, M)*): Seq[(Id, (Long, M))] = {
     val entries: Seq[EntryTableRecord[Id, M]] = pairs.zipWithIndex.map {
       case ((id, m), index) => EntryTableRecord(pk + index, id, System.currentTimeMillis(), m)
     }
     main ++= entries
-    val prepared: Seq[(Id, (Long, M))] = entries.map(e => (e.id ->(e.pk, e.entry)))
-    latest ++= prepared
+    val prepared: Seq[(Id, (Long, M))] = entries.map(e => e.id -> (e.pk, e.entry))
     indexMap.values.foreach(_.indexAction(prepared))
     pk += pairs.length
+    prepared
   }
 
   def get(id: Id) = latest.get(id).map(_._2)

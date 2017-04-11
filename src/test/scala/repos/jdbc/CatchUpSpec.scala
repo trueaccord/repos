@@ -219,5 +219,5 @@ class CatchUpSpec extends org.scalatest.fixture.WordSpec with MustMatchers with 
         ))
         await(db.run(FooRepo.textIndex.allMatching(d5))) must contain (id5 -> d5)
     }
-}
+  }
 }
