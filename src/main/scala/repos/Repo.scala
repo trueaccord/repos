@@ -25,6 +25,10 @@ class Repo[Id, M](val name: String)(implicit val idMapper: IdMapper[Id], val dat
 
   def insert(entries: (Id, M)*) = InsertAction(this, entries)
 
+  def insertWithoutLatest(id: Id, m: M): InsertAction[Id, M] = insertWithoutLatest((id, m))
+
+  def insertWithoutLatest(entries: (Id, M)*) = InsertAction(this, entries, insertIntoLatest = false)
+
   def apply(id: Id): GetAction[Id, M] = GetAction(this, id)
 
   def multiGet(ids: Iterable[Id]): MultiGetAction[Id, M] = MultiGetAction(this, ids)

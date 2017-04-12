@@ -31,8 +31,11 @@ class InMemDb extends Database {
       case CreateAction(repo) =>
         repoMap(repo.name) = new InMemRepoImpl[repo.KeyType, repo.ValueType](repo)
         Future.successful(())
-      case InsertAction(repo, entries) =>
+      case InsertAction(repo, entries, insertIntoLatest) if insertIntoLatest =>
         withRepoImpl(repo)(_.insert(entries: _*))
+        Future.successful(())
+      case InsertAction(repo, entries, _) =>
+        withRepoImpl(repo)(_.insertWithoutLatest(entries: _*))
         Future.successful(())
       case GetAction(repo, id) =>
         withRepoImpl(repo)(_.get(id) match {
