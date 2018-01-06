@@ -147,7 +147,7 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
         (for {
           m <- indexTable if sqlFilter(m.value)
           v <- latestEntryTable if (v.id === m.id && v.parentPk === m.parentPk)
-        } yield (m.value, v.id, v.entry)).sortBy(x => (x._1, x._2)).map(x => (x._2, x._3))
+        } yield (m.value, m.id, v.id, v.entry)).sortBy(x => (x._1, x._2)).map(x => (x._3, x._4))
           .applyIfDefined(offset)(obj => i => obj.drop(i))
           .applyIfDefined(count)(_.take).result
       }
