@@ -22,6 +22,13 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
   def insert(pairs: (Id, M)*): Unit = {
     val prepared = insertWithoutLatest(pairs: _*)
     latest ++= prepared
+    indexMap.values.filter(_.isOnLatest).foreach { indexTable =>
+      // Each individual insert must be preceded by a delete of old values
+      prepared.foreach { e =>
+        indexTable.deleteAction(Set(e._1))
+        indexTable.indexAction(Seq(e))
+      }
+    }
   }
 
   def insertWithoutLatest(pairs: (Id, M)*): Seq[(Id, (Long, M))] = {
@@ -30,7 +37,7 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
     }
     main ++= entries
     val prepared: Seq[(Id, (Long, M))] = entries.map(e => e.id -> (e.pk, e.entry))
-    indexMap.values.foreach(_.indexAction(prepared))
+    indexMap.values.filterNot(_.isOnLatest).foreach(_.indexAction(prepared))
     pk += pairs.length
     prepared
   }
@@ -40,6 +47,7 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
   def delete(ids: Set[Id]) = {
     main --= main.filter(e => ids.contains(e.id))
     latest --= ids
+    indexMap.values.filter(_.isOnLatest).foreach(_.deleteAction(ids))
   }
 
   def allLatestEntries: Seq[(Id, M)] = latest.map(t => (t._1, t._2._2)).toVector.sortBy(_._1)
@@ -59,7 +67,12 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
 
   class InnerIndex[R](index: SecondaryIndex[Id, M, R]) {
     val data = new mutable.HashMap[R, mutable.Set[(Long, Id)]] with mutable.MultiMap[R, (Long, Id)]
+    val isOnLatest: Boolean = index.isOnLatest
+
     implicit def rOrdering: Ordering[R] = index.projectionType.ordering
+
+    def deleteAction(ids: Set[Id]): Unit =
+      for { e <- data; v <- e._2 } if (ids.contains(v._2)) data.removeBinding(e._1, v)
 
     def indexAction(entries: Iterable[(Id, (Long, M))]) = {
       for {
@@ -95,7 +108,9 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
     }
 
     private def allIndexedValues =
-      (for {
+      if (index.isOnLatest)
+        data.map(_._1)
+      else (for {
         m <- data
         vpair <- m._2
         v <- latest if (v._1 == vpair._2 && v._2._1 == vpair._1)
@@ -105,5 +120,7 @@ private class InMemRepoImpl[Id, M](repo: Repo[Id, M]) {
       case Max => Some(allIndexedValues.max)
       case Min => Some(allIndexedValues.min)
     }
+
+    def tableSize: Int = data.values.map(_.size).sum
   }
 }

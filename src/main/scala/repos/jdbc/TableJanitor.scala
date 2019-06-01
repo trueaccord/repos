@@ -242,6 +242,8 @@ object TableJanitor {
           .filter(_.parentPk inSet pksToIndex).map(_.parentPk).result).toSet
     val unindexedEntries = entries.filterNot(e => alreadyIndexedPk.contains(e._2))
     if (unindexedEntries.nonEmpty) {
+      if (indexTable.isOnLatest)
+        jdbcDb.jc.blockingWrapper(inner.buildDeleteAction(unindexedEntries.map(_._1._1).toSet))
       jdbcDb.jc.blockingWrapper(inner.buildInsertAction(unindexedEntries))
       log(s"Repo ${indexTable.repo.name}: indexed ${unindexedEntries.size} entries into ${indexTable.name}")
     }
@@ -285,14 +287,20 @@ object TableJanitor {
                                            state: State,
                                            log: String => Unit = println)(implicit materializer: Materializer, ec: ExecutionContext): State = {
     def indexItems(items: Seq[EntryTableRecord[Id, M]]): Unit = {
+      import readJdbcDb.profile.api._
       val indexableItems: Seq[IndexableRecord[Id, M]] = items.map(i => ((i.id, i.entry), i.pk))
-
+      lazy val pksToIndex: Seq[Long] = indexableItems.map(_._2)
+      lazy val latestParentPksToIndex: Set[Long] =
+        readJdbcDb.jc.blockingWrapper(readJdbcDb.innerRepo(repo).latestEntryTable.filter(
+          _.parentPk.inSet(pksToIndex)).result).map(_._3).toSet
+      lazy val indexableLatestItems: Seq[IndexableRecord[Id, M]] =
+        indexableItems.filter(x => latestParentPksToIndex.contains(x._2))
       repo.allIndexes.foreach {
         index =>
           val indexCompleteUpTo = lookupInStatusTable(readJdbcDb, statusTable, index)
           if (items.last.pk > indexCompleteUpTo) {
             TableJanitor.ensureIndexed(writeJdbcDb, index,
-              indexableItems.filter(_._2 > indexCompleteUpTo), log)
+              (if (index.isOnLatest) indexableLatestItems else indexableItems).filter(_._2 > indexCompleteUpTo), log)
           }
       }
     }

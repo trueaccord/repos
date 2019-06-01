@@ -12,12 +12,15 @@ import scala.reflect.ClassTag
 import Action._
 
 import scala.util.{Failure, Success}
+import org.slf4j.{Logger, LoggerFactory}
 
 class Repo[Id, M](val name: String)(implicit val idMapper: IdMapper[Id], val dataMapper: DataMapper[M], val idClass: ClassTag[Id], val mClass: ClassTag[M]) extends IndexTableMethods[Id, M] {
   self =>
   type KeyType = Id
   type ValueType = M
   type IndexesList = List[SecondaryIndex[Id, M, R]] forSome {type R}
+
+  protected val logger: Logger = LoggerFactory.getLogger(getClass)
 
   def create(): CreateAction[Id, M] = CreateAction(this)
 
@@ -53,11 +56,26 @@ class Repo[Id, M](val name: String)(implicit val idMapper: IdMapper[Id], val dat
 
 trait IndexTableMethods[Id, M] {
   this: Repo[Id, M] =>
-  def multiIndexTable[R1 : ProjectionType](name: String)(f: M => Seq[R1]) = SecondaryIndex[Id, M, R1](this, name, f)
 
-  def indexTable[R1 : ProjectionType](name: String)(f: M => R1) = multiIndexTable[R1](name) { m: M => Seq(f(m)) }
+  protected def logger: Logger
 
-  def partialIndexTable[R1 : ProjectionType](name: String)(f: PartialFunction[M, R1]) = multiIndexTable[R1](name)(f.lift.andThen(_.toSeq))
+  def indexTable[R1 : ProjectionType](name: String, onLatest: Boolean = false)(f: M => R1): SecondaryIndex[Id, M, R1] =
+    secondaryIndex[R1](name, onLatest) { m: M => Seq(f(m)) }
+
+  def multiIndexTable[R1 : ProjectionType](name: String, onLatest: Boolean = false)(f: M => Seq[R1]): SecondaryIndex[Id, M, R1] = {
+    if(!onLatest)
+      logger.warn(s"Creating multi-index $name on non-latest table of repo ${this.name} is suboptimal, since no-longer-matched values will not be deleted from the index.")
+    secondaryIndex(name, onLatest)(f)
+  }
+
+  def partialIndexTable[R1 : ProjectionType](name: String, onLatest: Boolean = false)(f: PartialFunction[M, R1]): SecondaryIndex[Id, M, R1] = {
+    if(!onLatest)
+      logger.warn(s"Creating partial index $name on non-latest table of repo ${this.name} is suboptimal, since no-longer-matched values will not be deleted from the index.")
+    secondaryIndex[R1](name, onLatest)(f.lift.andThen(_.toSeq))
+  }
+
+  private def secondaryIndex[R1 : ProjectionType](name: String, onLatest: Boolean = false)(f: M => Seq[R1]) =
+    SecondaryIndex[Id, M, R1](this, name, f, onLatest)
 }
 
 abstract class RepoPublisher[T] extends Publisher[T] {
