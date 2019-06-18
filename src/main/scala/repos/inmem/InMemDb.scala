@@ -69,8 +69,6 @@ class InMemDb extends Database {
         Future.successful(withInnerIndex(index)(_.aggregate(agg)))
       case IndexCountAction(index, value) =>
         Future.successful(withInnerIndex(index)(_.count(value)))
-      case IndexTableSizeAction(index) =>
-        Future.successful(withInnerIndex(index)(_.tableSize))
     }
   }
 

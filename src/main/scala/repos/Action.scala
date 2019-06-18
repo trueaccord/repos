@@ -81,8 +81,6 @@ object Action {
 
   case object Min extends AggregationFunction
 
-  case class IndexTableSizeAction[Id, M, R](index: SecondaryIndex[Id, M, R]) extends IndexAction[Id, M, R, Int]
-
   implicit class StreamAction[K, A](val a: Action[Streaming[K], A]) extends AnyVal {
 //    def mapStream[L](f: K => L): Action[Streaming[L], A] = MapStreamAction[K, L, A](a, f)
   }

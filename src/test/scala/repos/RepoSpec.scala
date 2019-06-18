@@ -142,28 +142,6 @@ class RepoSpec extends org.scalatest.fixture.FlatSpec with MustMatchers with Opt
       await(db.run(FooRepo.seqIndex.allMatching('a'))) must be(Seq(id5 -> "ababa"))
   }
 
-  "indexes on _latest tables" should "work" in {
-    db =>
-      val id1 = FooId(UUID.randomUUID)
-      val id2 = FooId(UUID.randomUUID)
-      await(db.run(FooRepo.insert(id1, "1a")))
-      await(db.run(FooRepo.insert(id2, "2a")))
-      await(db.run(FooRepo.insert(id2, "2b")))
-
-      await(db.run(FooRepo.getEntries())).size must be(3)
-      await(db.run(FooRepo.firstCharIndex.tableSize)) must be(3)
-      await(db.run(FooRepo.allLatestEntries())).size must be(2)
-      await(db.run(FooRepo.firstCharIndexLatest.tableSize)) must be(2)
-
-      // This leaves partial index on full table unchanged (legacy behavior),
-      // but removes value from partial index on latest table (new behavior)
-      await(db.run(FooRepo.insert(id2, "")))
-      await(db.run(FooRepo.getEntries())).size must be(4)
-      await(db.run(FooRepo.firstCharIndex.tableSize)) must be(3)
-      await(db.run(FooRepo.allLatestEntries())).size must be(2)
-      await(db.run(FooRepo.firstCharIndexLatest.tableSize)) must be(1)
-  }
-
   "Action.seq" should "work for insert followed by get" in {
     db =>
       val id1 = FooId(UUID.randomUUID())

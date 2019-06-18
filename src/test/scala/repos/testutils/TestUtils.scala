@@ -28,12 +28,4 @@ object TestUtils {
     await(publisher.foreach(s => synchronized { b+=s }))
     b.result()
   }
-
-  def tableSize(jdbcDb: JdbcDb, tableName: String): Int = {
-    val s = jdbcDb.db.source.createConnection.createStatement
-    s.execute(s"select count(*) from $tableName")
-    val rs = s.getResultSet
-    rs.next()
-    rs.getInt(1)
-  }
 }

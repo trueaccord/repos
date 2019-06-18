@@ -16,10 +16,6 @@ object FooRepo extends Repo[FooId, String]("foo") {
     case t if t.size > 0 => t(0)
   }
 
-  def firstCharIndexLatest = partialIndexTable("first_ch_latest", onLatest = true) {
-    case t if t.size > 0 => t(0)
-  }
-
   def firstTwoIndex = indexTable("first_two_ch")(_.take(2))
 
   def seqIndex = multiIndexTable("seq")(_.toSeq)

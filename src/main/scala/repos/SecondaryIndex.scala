@@ -7,7 +7,7 @@ import scala.language.existentials
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
-case class SecondaryIndex[Id, M, R](repo: Repo[Id, M], name: String, projection: M => Seq[R], isOnLatest: Boolean = false)(implicit val projectionType : ProjectionType[R])
+case class SecondaryIndex[Id, M, R](repo: Repo[Id, M], name: String, projection: M => Seq[R])(implicit val projectionType : ProjectionType[R])
 
 class SecondaryIndexQueries[Id, M, R](val index: SecondaryIndex[Id, M, R]) extends AnyVal {
   import SecondaryIndexQueries._
@@ -33,8 +33,6 @@ class SecondaryIndexQueries[Id, M, R](val index: SecondaryIndex[Id, M, R]) exten
   def max: Action[NoStream, Option[R]] = IndexAggegrationAction(index, Max)
 
   def min: Action[NoStream, Option[R]] = IndexAggegrationAction(index, Min)
-
-  def tableSize: Action[NoStream, Int] = IndexTableSizeAction(index)
 }
 
 object SecondaryIndexQueries {

@@ -60,13 +60,6 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
           _ <- DBIO.sequence((newEntries zip pkList).toSeq.sortBy(t => idMapper.toUUID(t._1.id)).map {
             e => latestEntryTable.insertOrUpdate((e._1.id, e._1.entry, e._2))
           })
-          // Update any indices on Latest table
-          _ <- DBIO.sequence(effectiveIndexMap.values.filter(_.isOnLatest).toSeq.flatMap { index =>
-            // Each individual insert must be preceded by a delete of old values
-            (elements zip pkList).map { case (e, pk) =>
-              index.buildDeleteAction(Set(e._1)) andThen index.buildInsertAction(Seq(e -> pk))
-            }
-          })
         } yield pkList
         db.run(r.transactionally)
       } else {
@@ -95,10 +88,7 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
     def delete(ids: Set[Id])(implicit ec: ExecutionContext): Future[Unit] = {
       db.run(
         entryTable.filter(_.uuid inSet ids).delete andThen
-          latestEntryTable.filter(_.id inSet ids).delete andThen
-          DBIO.sequence(indexMap.values.filter(_.isOnLatest).map(
-            _.indexTable.filter(_.id inSet ids).delete))
-      ).map(_ => ())
+          latestEntryTable.filter(_.id inSet ids).delete).map(_ => ())
     }
 
     def getEntries(fromPk: Long, idsConstraint: Option[Seq[Id]], excludePks: Set[Long],
@@ -139,12 +129,9 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
           MappedColumnType.base(e.to, e.from)(e.classTag, baseColumnType(e.base))
       }
 
-      val ix3TableName: String = s"ix3_${index.repo.name}__${index.name}"
-      val isOnLatest: Boolean = index.isOnLatest
-      val indexTable = new TableQuery(new Ix3Table[Id, R](_, ix3TableName)(repo.idMapper, repo.idClass, baseColumnType(rp)))
+      def ix3TableName: String = s"ix3_${index.repo.name}__${index.name}"
 
-      def buildDeleteAction(ids: Set[Id]) =
-        indexTable.filter(_.id.inSet(ids)).delete
+      val indexTable = new TableQuery(new Ix3Table[Id, R](_, ix3TableName)(repo.idMapper, repo.idClass, baseColumnType(rp)))
 
       def buildInsertAction(entries: Iterable[((Id, M), Long)]) = {
         indexTable ++= (for {
@@ -166,17 +153,13 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       }
 
       private def idsSatisfying[T <: Rep[_]](sqlFilter: Rep[R] => T)(implicit wt: CanBeQueryCondition[T]) =
-        if (index.isOnLatest)
-          indexTable.withFilter(x => sqlFilter(x.value)).map(_.id)
-        else (for {
+        (for {
           m <- indexTable if sqlFilter(m.value)
           v <- latestEntryTable if (v.id === m.id && v.parentPk === m.parentPk)
         } yield v.id)
 
       private def allIndexedValues =
-        if (index.isOnLatest)
-          indexTable.map(_.value)
-        else (for {
+        (for {
           m <- indexTable
           v <- latestEntryTable if (v.id === m.id && v.parentPk === m.parentPk)
         } yield m.value)
@@ -203,8 +186,6 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
         case Max => db.run(allIndexedValues.max.result)
         case Min => db.run(allIndexedValues.min.result)
       }
-
-      def tableSize: Future[Int] = db.run(indexTable.size.result)
     }
   }
 
@@ -321,8 +302,6 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       innerIndex(index).count(criteria)
     case IndexAggegrationAction(index, agg) =>
       innerIndex(index).aggregate(agg)
-    case IndexTableSizeAction(index) =>
-      innerIndex(index).tableSize
   }
 
   private[repos] lazy val jc = new JanitorComponent(profile, db)
