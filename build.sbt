@@ -2,11 +2,11 @@ import ReleaseTransformations._
 
 val SlickVersion = "3.1.1"
 
-val AkkaVersion = "2.4.14"
+val AkkaVersion = "2.5.22"
 
-val AkkaHttpVersion = "10.0.0"
+val AkkaHttpVersion = "10.1.8"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.12"
 
 organization := "com.trueaccord.repos"
 
