@@ -39,19 +39,14 @@ class RepoSpec extends org.scalatest.fixture.FlatSpec with MustMatchers with Opt
     db =>
       val id1 = FooId(UUID.randomUUID())
       val id2 = FooId(UUID.randomUUID())
-      val id3 = FooId(UUID.randomUUID())
       val z = FooRepo.insert(id1, "17")
       await(db.run(z))
       await(db.run(FooRepo(id1))) must be("17")
       intercept[ElementNotFoundException](await(db.run(FooRepo(id2))))
       await(db.run(FooRepo.insert(id2, "19")))
       await(db.run(FooRepo(id2))) must be("19")
-      await(db.run(FooRepo.insertWithoutLatest(id3, "21")))
-      intercept[ElementNotFoundException](await(db.run(FooRepo(id3))))
 
       await(db.run(FooRepo.multiGet(Seq(id1, id2)))) must be(
-        Map(id1 -> "17", id2 -> "19"))
-      await(db.run(FooRepo.allLatestEntries())).toMap must be (
         Map(id1 -> "17", id2 -> "19"))
   }
 

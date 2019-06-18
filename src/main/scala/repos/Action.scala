@@ -40,7 +40,7 @@ object Action {
     def repo: RepoType
   }
 
-  case class InsertAction[Id, M](repo: Repo[Id, M], entries: Seq[(Id, M)], insertIntoLatest: Boolean = true) extends RepoAction[NoStream, Id, M, Unit]
+  case class InsertAction[Id, M](repo: Repo[Id, M], entries: Seq[(Id, M)]) extends RepoAction[NoStream, Id, M, Unit]
 
   case class GetAction[Id, M](repo: Repo[Id, M], id: Id) extends RepoAction[NoStream, Id, M, M]
 

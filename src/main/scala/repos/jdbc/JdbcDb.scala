@@ -35,36 +35,27 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
       i.name -> new IndexTableImpl(i)(i.projectionType)
     }.toMap
 
-    def insert(elements: Iterable[(Id, M)], skipIndexesForTesting: Boolean = false, insertIntoLatest: Boolean = true)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
+    def insert(elements: Iterable[(Id, M)], skipIndexesForTesting: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Long]] = {
       val newEntries = elements.map(e => EntryTableRecord[Id, M](-1, e._1, System.currentTimeMillis(), e._2))
 
       val effectiveIndexMap =
         if (skipIndexesForTesting) Map.empty[String, IndexTableImpl[_]] else
         indexMap
-
-      def insertWithoutLatestAction =
-        for {
-          pkList <- entryTable.returning(entryTable.map(_.pk)) ++= newEntries
-          _ <- DBIO.sequence(effectiveIndexMap.values.map(
-            _.buildInsertAction(elements zip pkList)))
-        } yield pkList
       // Build the insert as a single DBAction.
-      if (insertIntoLatest) {
-        val r = for {
-          pkList <- insertWithoutLatestAction
-          // As we are making all the inserts in one big transaction which locks the rows being updated
-          // We must make sure that we make the inserts in the same order. Otherwise, a parallel insertion
-          // that tries to insert the same ids but in a different order will cause a deadlock.
-          // To avoid this situation, we insert the new elements into the latest table ordered by
-          // their ids.
-          _ <- DBIO.sequence((newEntries zip pkList).toSeq.sortBy(t => idMapper.toUUID(t._1.id)).map {
-            e => latestEntryTable.insertOrUpdate((e._1.id, e._1.entry, e._2))
-          })
-        } yield pkList
-        db.run(r.transactionally)
-      } else {
-        db.run(insertWithoutLatestAction)
-      }
+      val r = for {
+        pkList <- entryTable.returning(entryTable.map(_.pk)) ++= newEntries
+        _ <- DBIO.sequence(effectiveIndexMap.values.map(
+          _.buildInsertAction(elements zip pkList)))
+        // As we are making all the inserts in one big transaction which locks the rows being updated
+        // We must make sure that we make the inserts in the same order. Otherwise, a parallel insertion
+        // that tries to insert the same ids but in a different order will cause a deadlock.
+        // To avoid this situation, we insert the new elements into the latest table ordered by
+        // their ids.
+        _ <- DBIO.sequence((newEntries zip pkList).toSeq.sortBy(t => idMapper.toUUID(t._1.id)).map {
+          e => latestEntryTable.insertOrUpdate((e._1.id, e._1.entry, e._2))
+        })
+      } yield pkList
+      db.run(r.transactionally)
     }
 
     private val getLatestByIdQuery = latestEntryTable.findBy(_.id)
@@ -277,8 +268,8 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
   def runRepoAction[S <: repos.NoStream, Id, M, R](e: RepoAction[S, Id, M, R], ctx: Context)(implicit ec: ExecutionContext): Future[R] = e match {
     case CreateAction(repo) =>
       innerRepo(repo).create
-    case InsertAction(repo, entries, insertIntoLatest) =>
-      innerRepo(repo).insert(entries, insertIntoLatest = insertIntoLatest).map(_ => ())
+    case InsertAction(repo, entries) =>
+      innerRepo(repo).insert(entries).map(_ => ())
     case GetAction(repo, id) =>
       innerRepo(repo).get(id)
         .flatMap {
