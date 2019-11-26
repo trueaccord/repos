@@ -79,7 +79,13 @@ object RepoManagement {
     }
   }
 
-  def cleanStaleIndex[Id, M, R](jdbcDb: JdbcDb, index: SecondaryIndex[Id, M, R]) = {
+  private def maybeLimitString(maybeLimit: Option[Int]): String =
+    maybeLimit.map(limit => s"LIMIT $limit").getOrElse("")
+
+  def cleanStaleIndex[Id, M, R](
+    jdbcDb: JdbcDb,
+    index: SecondaryIndex[Id, M, R],
+    maybeLimit: Option[Int] = None): Int = {
     import jdbcDb.profile.api._
     val latestTableName = jdbcDb.innerRepo(index.repo).latestTableName
     val ix3TableName = jdbcDb.innerIndex(index).ix3TableName
@@ -87,7 +93,8 @@ object RepoManagement {
     val queryString: DBIO[Int] =
       sqlu"""DELETE i FROM #$ix3TableName AS i LEFT JOIN
             #$latestTableName AS l ON i.id=l.id AND i.parent_pk=l.parent_pk
-            WHERE l.parent_pk IS NULL;"""
+            WHERE l.parent_pk IS NULL
+            ${maybeLimitString(maybeLimit)};"""
     val count = jdbcDb.jc.blockingWrapper(queryString)
     count
   }
@@ -100,7 +107,11 @@ object RepoManagement {
   //
   // deleting from innodb tables is slow. space is actually only recovered after
   // OPTIMIZE TABLE, which essentially rebuilds the table from scratch.
-  def cleanupOldVersionsSql[Id, M](jdbcDb: JdbcDb, repo: Repo[Id, M], numVersionsToKeep: Int) = {
+  def cleanupOldVersionsSql[Id, M](
+    jdbcDb: JdbcDb,
+    repo: Repo[Id, M],
+    numVersionsToKeep: Int,
+    maybeLimit: Option[Int] = None): Int = {
     import jdbcDb.profile.api._
     val numVersionsToKeep0 = numVersionsToKeep - 1 //LIMIT starts counting at 0
     val tableName = repo.name
@@ -136,6 +147,7 @@ object RepoManagement {
              ) lo
         ON l.uuid = lo.uuid
         AND (l.time_msec, l.pk) < (mts, mpk)
+        ${maybeLimitString(maybeLimit)}
         """
     val count = jdbcDb.jc.blockingWrapper(queryString)
     val optimizeQuery = sql"OPTIMIZE TABLE #$tableName".as[String]
