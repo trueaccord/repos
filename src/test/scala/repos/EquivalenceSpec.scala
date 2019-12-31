@@ -3,8 +3,9 @@ package repos
 import java.util.UUID
 
 import org.scalacheck.Gen
-import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, MustMatchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import repos.Action._
 import repos.SecondaryIndexQueries._
 import repos.inmem.InMemDb
@@ -148,7 +149,7 @@ object GenActions {
 }
 
 
-class EquivalenceSpec extends FlatSpec with MustMatchers with PropertyChecks {
+class EquivalenceSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks {
   val ids: Vector[FooId] = Vector.fill(30)(FooId(UUID.randomUUID()))
 
   def waitAndCompare[T](f1: Future[T], f2: Future[T]) = {

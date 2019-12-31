@@ -1,12 +1,16 @@
 import ReleaseTransformations._
 
-val SlickVersion = "3.1.1"
+val SlickVersion = "3.2.3"
 
 val AkkaVersion = "2.5.22"
 
 val AkkaHttpVersion = "10.1.8"
 
-scalaVersion := "2.11.12"
+lazy val scala212 = "2.12.10"
+lazy val scala211 = "2.11.12"
+lazy val supportedScalaVersions = List(scala212, scala211)
+
+scalaVersion := scala211
 
 organization := "com.trueaccord.repos"
 
@@ -36,16 +40,21 @@ libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion,
     "com.typesafe.slick" %% "slick" % SlickVersion,
     "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "org.scala-lang.modules" %% "scala-async" % "0.9.5",
+    "org.scala-lang.modules" %% "scala-async" % "0.9.7",
     "org.xerial.snappy" % "snappy-java" % "1.1.1.6",
     "com.github.shyiko" % "mysql-binlog-connector-java" % "0.4.1",
     "org.slf4j" % "slf4j-api" % "1.7.5",
 
     "com.typesafe.akka" %% "akka-testkit" % AkkaVersion % "test",
     "com.h2database" % "h2" % "1.4.189" % "test",
-    "org.scalatest" %% "scalatest" % "2.2.6" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.12.5" % "test"
+    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalatest" %% "scalatest" % "3.1.0" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.1" % "test",
+    "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % "test"
 )
 
-lazy val root = (project in file(".")).enablePlugins(SbtTwirl)
+lazy val root = (project in file("."))
+  .enablePlugins(SbtTwirl)
+  .settings(crossScalaVersions := supportedScalaVersions)
+
 
