@@ -6,7 +6,6 @@ import slick.jdbc.meta.MTable
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext}
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object RepoManagement {
   def existingTables(jdbcDb: JdbcDb)(implicit ec: ExecutionContext): Set[String] = {
@@ -15,11 +14,9 @@ object RepoManagement {
 
   // Create all missing repos and index tables.
   def createMissingRepos(jdbcDb: JdbcDb,
-                         repos: Seq[Repo[_, _]], log: String => Unit = println): Seq[SecondaryIndex[_, _, _]] = {
+                         repos: Seq[Repo[_, _]], log: String => Unit = println)(implicit ec: ExecutionContext): Seq[SecondaryIndex[_, _, _]] = {
     val jc = jdbcDb.jc
     import jc.profile.api._
-
-    import scala.concurrent.ExecutionContext.Implicits.global
 
     {
       val _tables = existingTables(jdbcDb)
@@ -52,7 +49,7 @@ object RepoManagement {
     parRepos.flatMap(upgradeRepo).seq
   }
 
-  def dropAll(jdbcDb: JdbcDb, repos: Seq[Repo[_, _]]): Unit = {
+  def dropAll(jdbcDb: JdbcDb, repos: Seq[Repo[_, _]])(implicit ec: ExecutionContext): Unit = {
     import jdbcDb.profile.api._
     val existingTablesInternal: Set[String] = existingTables(jdbcDb)
     if (existingTablesInternal.contains(jdbcDb.jc.ScannerCheckpointsTableName)) {

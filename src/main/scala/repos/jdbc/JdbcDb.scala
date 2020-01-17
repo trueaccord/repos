@@ -9,9 +9,9 @@ import repos.SecondaryIndex._
 import repos.SecondaryIndexQueries._
 import repos._
 import slick.dbio.Effect.Read
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcProfile
 import slick.lifted.CanBeQueryCondition
-import slick.profile.FixedSqlStreamingAction
+import slick.sql.FixedSqlStreamingAction
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.{existentials, higherKinds}

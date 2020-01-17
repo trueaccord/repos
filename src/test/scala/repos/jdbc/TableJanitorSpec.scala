@@ -3,13 +3,14 @@ package repos.jdbc
 import java.util.UUID
 
 import org.scalacheck.Gen
-import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, MustMatchers}
-import repos.testutils.FooId
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.must.Matchers
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import repos.EntryTableRecord
-import repos.jdbc.TableJanitor.{State, Gap}
+import repos.jdbc.TableJanitor.{Gap, State}
+import repos.testutils.FooId
 
-class TableJanitorSpec extends FlatSpec with MustMatchers with PropertyChecks {
+class TableJanitorSpec extends AnyFlatSpec with Matchers with ScalaCheckPropertyChecks {
   def entry(pk: Long, ts: Long): EntryTableRecord[FooId, String] =
     EntryTableRecord(pk, FooId(UUID.randomUUID()), ts, "")
 
@@ -75,7 +76,7 @@ class TableJanitorSpec extends FlatSpec with MustMatchers with PropertyChecks {
   def genScenario = for {
     state <- genState
     items <- Gen.someOf((state.maxSeen + 1L) to (state.maxSeen + 1000L)).map(_.map(entry(_, 101)))
-  } yield (state, items)
+  } yield (state, items.sortBy(_.pk))
 
   def genScenarioNoGaps = for {
     state <- genStateNoGaps
