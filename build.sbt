@@ -47,7 +47,7 @@ libraryDependencies ++= Seq(
 
     "com.typesafe.akka" %% "akka-testkit" % AkkaVersion % "test",
     "com.h2database" % "h2" % "1.4.189" % "test",
-    "org.scalactic" %% "scalactic" % "3.1.0",
+    "org.scalactic" %% "scalactic" % "3.1.0" % "test",
     "org.scalatest" %% "scalatest" % "3.1.0" % "test",
     "org.scalacheck" %% "scalacheck" % "1.14.1" % "test",
     "org.scalatestplus" %% "scalatestplus-scalacheck" % "3.1.0.0-RC2" % "test"
