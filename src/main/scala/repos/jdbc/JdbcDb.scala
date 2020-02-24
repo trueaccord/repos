@@ -234,7 +234,7 @@ class JdbcDb(val profile: JdbcProfile, private[repos] val db: JdbcProfile#Backen
 
     def id = column[Id]("id")(columnMapper[Id])
 
-    def value = column[R]("value")
+    def value = column[R]("value", O.Length(254))
 
     // We build an index on the parentPk to make it efficient to find rows in the log table
     // which are not indexed (we look up this table for a lack of a record with a given pk)

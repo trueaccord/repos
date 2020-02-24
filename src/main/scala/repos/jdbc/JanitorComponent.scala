@@ -5,7 +5,7 @@ import repos.Repo
 import scala.async.Async.{ async, await }
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import slick.driver.{JdbcDriver, JdbcProfile}
+import slick.jdbc.JdbcProfile
 
 case class IndexStatusRecord(pk: Option[Long] = None, indexTableName: String, lastPk: Long)
 
@@ -20,7 +20,7 @@ class JanitorComponent(val profile: JdbcProfile, db: JdbcProfile#Backend#Databas
   class JanitorIndexStatusTable(tag: Tag) extends Table[IndexStatusRecord](tag, TableJanitor.JANITOR_INDEX_STATUS_TABLE) {
     def pk = column[Long]("pk", O.AutoInc, O.PrimaryKey)
 
-    def indexTableName = column[String]("index_table")
+    def indexTableName = column[String]("index_table", O.Length(254))
 
     def lastPk = column[Long]("last_pk")
 
@@ -50,9 +50,9 @@ class JanitorComponent(val profile: JdbcProfile, db: JdbcProfile#Backend#Databas
   class ScannerCheckpointsTable(tag: Tag) extends Table[ScannerCheckpoint](tag, ScannerCheckpointsTableName) {
     import scala.async.Async.{ async, await }
     /** Identifies the scanning process (there may be more than one process scanning the same repo. */
-    def jobId = column[String]("job_id")
+    def jobId = column[String]("job_id", O.Length(254))
 
-    def repoName = column[String]("repo_name")
+    def repoName = column[String]("repo_name", O.Length(254))
 
     def lastPk = column[Long]("last_pk")
 
